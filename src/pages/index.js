@@ -3,6 +3,7 @@ import Image from 'next/image'
 import { Inter } from 'next/font/google'
 import styles from '@/styles/Home.module.css'
 import * as holtWinters from 'holtwinters'
+import { useEffect, useState } from 'react'
 const inter = Inter({ subsets: ['latin'] })
 // var holtWinters = require('holtwinters')
 console.log(holtWinters)
@@ -14,31 +15,36 @@ var predictionLength = 4
 var result = getAugumentedDataset(data, predictionLength)
 console.log(result)  // DUDE, IT WORKS!
 
-// "prepare-wasm": "jsmaker wasm/native.wasm -t uint8 > wrapper/native.bin.js",
-// const ARIMAPromise = require('arima/async')
-//
-// ARIMAPromise.then(ARIMA => {
-//   const arima = new ARIMA({ p: 2, d: 1, q: 2, P: 0, D: 0, Q: 0, S: 0, verbose: false }).train(ts)
-//   const [pred, errors] = arima.predict(10)
-//   console.log('pred', pred)
-// })
 
 const ts = Array(10).fill(0).map((_, i) => i + Math.random() / 5)
-const arima = require('arima')
-const [pred, errors] = arima(ts, 20, {
-  method: 0, // ARIMA method (Default: 0)
-  optimizer: 6, // Optimization method (Default: 6)
-  p: 1, // Number of Autoregressive coefficients
-  d: 0, // Number of times the series needs to be differenced
-  q: 1, // Number of Moving Average Coefficients
-  verbose: true // Output model analysis to console
-})
-console.log('pred', pred) // DUDE it works too!!
+const ARIMAPromise = require('arima/async')
+
+
+// const ARIMAPromise = require('arima/async')
+
+
+// const arima = require('arima')
+// const [pred, errors] = arima(ts, 20, {
+//   method: 0, // ARIMA method (Default: 0)
+//   optimizer: 6, // Optimization method (Default: 6)
+//   p: 1, // Number of Autoregressive coefficients
+//   d: 0, // Number of times the series needs to be differenced
+//   q: 1, // Number of Moving Average Coefficients
+//   verbose: true // Output model analysis to console
+// })
+// console.log('pred', pred) // DUDE it works too!!
 
 
 export default function Home() {
-
-
+  const [pred, setPred] = useState([])
+  useEffect(() => {
+    ARIMAPromise.then(ARIMA => {
+      const arima = new ARIMA({ p: 2, d: 1, q: 2, P: 0, D: 0, Q: 0, S: 0, verbose: false }).train(ts)
+      const [pred, errors] = arima.predict(10)
+      console.log('pred', pred)
+      setPred(pred)
+    })
+  }, [])
   return (
     <>
       <Head>
@@ -49,6 +55,7 @@ export default function Home() {
       </Head>
       <main className={styles.main}>
         <div className={styles.description}>
+          <p>{JSON.stringify(pred)}</p>
           <p>
             Get started by editing?&nbsp;
             <code className={styles.code}>src/pages/index.js</code>
