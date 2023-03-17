@@ -6,9 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "postinstall2": "cd node_modules/next && npm run build",
+    "postinstall": "cd node_modules/arima && npm run prepare-wasm"
   },
   "dependencies": {
+    "arima": "^0.2.5",
     "next": "13.2.4",
     "react": "18.2.0",
     "react-dom": "18.2.0"
@@ -17,5 +20,8 @@
     "fs": false,
     "path": false,
     "os": false
+  },
+  "devDependencies": {
+    "jsmaker": "^0.0.2"
   }
 }
