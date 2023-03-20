@@ -1,5 +1,7 @@
 import { till } from '@/components/constant'
 import { interpolate } from 'd3-interpolate'
+import { scaleTime } from 'd3'
+import * as d3 from 'd3'
 
 const values_1 = [
   {
@@ -8052,8 +8054,6 @@ const values_5 = [
   },
 ];
 
-
-
 export const values_1_timeseries = values_1.map((e) => e.value).slice(0, till);
 export const values_2_timeseries = values_2.map((e) => e.value).slice(0, till);
 export const values_3_timeseries = values_3.map((e) => e.value).slice(0, till);
@@ -8064,7 +8064,23 @@ export const values_5_timeseries = values_5.map((e) => e.value).slice(0, till);
 let intr = interpolate(
   [19, 33, 2], [1, 12, 10])
 console.log("Type of returned function is: ",
-  typeof (intr));
+  typeof (intr), intr);
 
-console.warn(intr(0.4))
-console.warn(interpolate, 'd3')
+// Create a time scale
+const timeScale = scaleTime()
+  .domain([
+    new Date(values_5[0].timestamp),
+    new Date(values_5[values_5.length - 1].timestamp)]);
+
+// TODO 400 values in that range
+
+// Generate an array of timestamps
+const timestamps = d3.range(0, values_5.length).map(i => timeScale.invert(i));
+
+// Extract values for each timestamp
+const values = timestamps.map(t => {
+  const value = d3.min(values_5, d => Math.abs(new Date(d.timestamp) - t));
+  return values_5.find(d => d.timestamp === value.timestamp)?.value;
+});
+
+console.warn('almost work', values);
