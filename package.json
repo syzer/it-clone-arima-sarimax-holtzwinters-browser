@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "arima": "^0.2.5",
+    "d3-interpolate": "^3.0.1",
     "highcharts": "^10.3.3",
     "highcharts-react-official": "^3.2.0",
     "holtwinters": "^0.0.1",
