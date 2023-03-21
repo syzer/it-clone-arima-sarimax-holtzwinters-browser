@@ -1,9 +1,9 @@
-import { till } from '@/components/constant'
-import { interpolate } from 'd3-interpolate'
-import { scaleTime } from 'd3'
-import * as d3 from 'd3'
+import { till } from "@/components/constant";
+import { interpolate } from "d3-interpolate";
+import { scaleTime } from "d3";
+import * as d3 from "d3";
 
-const values_1 = [
+export const values_1 = [
   {
     timestamp: "2021-10-28T08:30:00Z",
     value: 158.99699999999999,
@@ -2006,7 +2006,7 @@ const values_1 = [
   },
 ];
 
-const values_2 = [
+export const values_2 = [
   {
     timestamp: "2020-04-07T09:55:00Z",
     value: 98.999,
@@ -4009,7 +4009,7 @@ const values_2 = [
   },
 ];
 
-const values_3 = [
+export const values_3 = [
   {
     timestamp: "2023-03-08T11:25:32.396Z",
     value: 0.01709153,
@@ -6012,7 +6012,7 @@ const values_3 = [
   },
 ];
 
-const values_4 = [
+export const values_4 = [
   {
     timestamp: "2020-03-24T14:00:00Z",
     value: 99.95,
@@ -8015,29 +8015,29 @@ const values_4 = [
   },
 ];
 
-const values_5 = [
+export const values_5 = [
   {
     timestamp: "2021-09-10T02:34:00Z",
-    value: 44,
+    value: 10,
   },
   {
     timestamp: "2021-09-10T03:34:00Z",
-    value: 45,
+    value: 25,
   },
   {
-    timestamp: "2021-09-10T04:34:00Z",
-    value: 46,
+    timestamp: "2022-09-10T04:34:00Z",
+    value: 36,
   },
   {
-    timestamp: "2021-09-10T05:34:00Z",
+    timestamp: "2023-09-10T05:34:00Z",
     value: 47,
   },
   {
-    timestamp: "2021-09-10T06:34:00Z",
+    timestamp: "2024-09-10T06:34:00Z",
     value: 48,
   },
   {
-    timestamp: "2028-09-09T22:34:00Z",
+    timestamp: "2027-09-09T22:34:00Z",
     value: 40,
   },
   {
@@ -8050,37 +8050,65 @@ const values_5 = [
   },
   {
     timestamp: "2028-09-10T01:34:00Z",
-    value: 43,
+    value: 100,
   },
 ];
 
-export const values_1_timeseries = values_1.map((e) => e.value).slice(0, till);
-export const values_2_timeseries = values_2.map((e) => e.value).slice(0, till);
-export const values_3_timeseries = values_3.map((e) => e.value).slice(0, till);
-export const values_4_timeseries = values_4.map((e) => e.value).slice(0, till);
-export const values_5_timeseries = values_5.map((e) => e.value).slice(0, till);
+// let intr = interpolate([19, 33, 2], [1, 12, 10]);
+// // console.log("Type of returned function is: ", typeof intr, intr);
 
+// // Create a time scale
+// const timeScale = scaleTime().domain([new Date(values_5[0].timestamp), new Date(values_5[values_5.length - 1].timestamp)]);
 
-let intr = interpolate(
-  [19, 33, 2], [1, 12, 10])
-console.log("Type of returned function is: ",
-  typeof (intr), intr);
+// // TODO 400 values in that range
 
-// Create a time scale
-const timeScale = scaleTime()
-  .domain([
-    new Date(values_5[0].timestamp),
-    new Date(values_5[values_5.length - 1].timestamp)]);
+// // Generate an array of timestamps
+// const timestamps = d3.range(0, values_5.length).map((i) => timeScale.invert(i));
 
-// TODO 400 values in that range
+// // Extract values for each timestamp
+// const values = timestamps.map((t) => {
+//   const value = d3.min(values_5, (d) => Math.abs(new Date(d.timestamp) - t));
+//   return values_5.find((d) => d.timestamp === value.timestamp)?.value;
+// });
 
-// Generate an array of timestamps
-const timestamps = d3.range(0, values_5.length).map(i => timeScale.invert(i));
+// console.warn("almost work", values);
 
-// Extract values for each timestamp
-const values = timestamps.map(t => {
-  const value = d3.min(values_5, d => Math.abs(new Date(d.timestamp) - t));
-  return values_5.find(d => d.timestamp === value.timestamp)?.value;
+const parseTime = (timestamp) => {
+  if (timestamp.slice(-1) === "Z") {
+    return d3.timeParse("%Y-%m-%dT%H:%M:%S.%LZ")(timestamp) || d3.timeParse("%Y-%m-%dT%H:%M:%SZ")(timestamp);
+  } else {
+    return null;
+  }
+};
+
+const timestamps = values_5.map((d) => parseTime(d.timestamp));
+
+const sortedData = values_5.slice().sort((a, b) => parseTime(a.timestamp) - parseTime(b.timestamp));
+const timeDiff = timestamps[timestamps.length - 1] - timestamps[0];
+const numIntervals = values_5.length;
+// const interval = timeDiff / numIntervals;
+// const evenlySpacedTimestamps = d3.range(numIntervals).map((i) => new Date(timestamps[0].getTime() + i * interval));
+
+const startTime = timestamps[0].getTime();
+const endTime = timestamps[timestamps.length - 1].getTime();
+const interval = (endTime - startTime) / (numIntervals - 1);
+
+const evenlySpacedTimestamps = d3.range(numIntervals).map((i) => new Date(startTime + i * interval));
+
+const evenlySpacedData = evenlySpacedTimestamps.map((timestamp) => {
+  const closestIdx = d3.bisectLeft(timestamps, timestamp);
+  if (closestIdx === 0) {
+    return { value: sortedData[0].value, timestamp: timestamp.toISOString() };
+  }
+  if (closestIdx === timestamps.length) {
+    return { value: sortedData[timestamps.length - 1].value, timestamp: timestamp.toISOString() };
+  }
+
+  const before = sortedData[closestIdx - 1];
+  const after = sortedData[closestIdx];
+
+  const t = (timestamp.getTime() - parseTime(before.timestamp).getTime()) / (parseTime(after.timestamp).getTime() - parseTime(before.timestamp).getTime());
+
+  const value = before.value + t * (after.value - before.value);
+  return { value, timestamp: timestamp.toISOString() };
 });
-
-console.warn('almost work', values);
