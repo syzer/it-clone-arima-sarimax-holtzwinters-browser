@@ -8054,6 +8054,7 @@ export const values_5 = [
   },
 ];
 
+// LUKAS
 // let intr = interpolate([19, 33, 2], [1, 12, 10]);
 // // console.log("Type of returned function is: ", typeof intr, intr);
 
@@ -8073,42 +8074,40 @@ export const values_5 = [
 
 // console.warn("almost work", values);
 
-const parseTime = (timestamp) => {
-  if (timestamp.slice(-1) === "Z") {
-    return d3.timeParse("%Y-%m-%dT%H:%M:%S.%LZ")(timestamp) || d3.timeParse("%Y-%m-%dT%H:%M:%SZ")(timestamp);
-  } else {
-    return null;
-  }
-};
+// NICOLA
+// const parseTime = (timestamp) => {
+//   if (timestamp.slice(-1) === "Z") {
+//     return d3.timeParse("%Y-%m-%dT%H:%M:%S.%LZ")(timestamp) || d3.timeParse("%Y-%m-%dT%H:%M:%SZ")(timestamp);
+//   } else {
+//     return null;
+//   }
+// };
 
-const timestamps = values_5.map((d) => parseTime(d.timestamp));
+// const timestamps = values_5.map((d) => parseTime(d.timestamp));
 
-const sortedData = values_5.slice().sort((a, b) => parseTime(a.timestamp) - parseTime(b.timestamp));
-const timeDiff = timestamps[timestamps.length - 1] - timestamps[0];
-const numIntervals = values_5.length;
-// const interval = timeDiff / numIntervals;
-// const evenlySpacedTimestamps = d3.range(numIntervals).map((i) => new Date(timestamps[0].getTime() + i * interval));
+// const sortedData = values_5.slice().sort((a, b) => parseTime(a.timestamp) - parseTime(b.timestamp));
+// const numIntervals = values_5.length;
 
-const startTime = timestamps[0].getTime();
-const endTime = timestamps[timestamps.length - 1].getTime();
-const interval = (endTime - startTime) / (numIntervals - 1);
+// const startTime = timestamps[0].getTime();
+// const endTime = timestamps[timestamps.length - 1].getTime();
+// const interval = (endTime - startTime) / (numIntervals - 1);
 
-const evenlySpacedTimestamps = d3.range(numIntervals).map((i) => new Date(startTime + i * interval));
+// const evenlySpacedTimestamps = d3.range(numIntervals).map((i) => new Date(startTime + i * interval));
 
-const evenlySpacedData = evenlySpacedTimestamps.map((timestamp) => {
-  const closestIdx = d3.bisectLeft(timestamps, timestamp);
-  if (closestIdx === 0) {
-    return { value: sortedData[0].value, timestamp: timestamp.toISOString() };
-  }
-  if (closestIdx === timestamps.length) {
-    return { value: sortedData[timestamps.length - 1].value, timestamp: timestamp.toISOString() };
-  }
+// const evenlySpacedData = evenlySpacedTimestamps.map((timestamp) => {
+//   const closestIdx = d3.bisectLeft(timestamps, timestamp);
+//   if (closestIdx === 0) {
+//     return { value: sortedData[0].value, timestamp: timestamp.toISOString() };
+//   }
+//   if (closestIdx === timestamps.length) {
+//     return { value: sortedData[timestamps.length - 1].value, timestamp: timestamp.toISOString() };
+//   }
 
-  const before = sortedData[closestIdx - 1];
-  const after = sortedData[closestIdx];
+//   const before = sortedData[closestIdx - 1];
+//   const after = sortedData[closestIdx];
 
-  const t = (timestamp.getTime() - parseTime(before.timestamp).getTime()) / (parseTime(after.timestamp).getTime() - parseTime(before.timestamp).getTime());
+//   const t = (timestamp.getTime() - parseTime(before.timestamp).getTime()) / (parseTime(after.timestamp).getTime() - parseTime(before.timestamp).getTime());
 
-  const value = before.value + t * (after.value - before.value);
-  return { value, timestamp: timestamp.toISOString() };
-});
+//   const value = before.value + t * (after.value - before.value);
+//   return { value, timestamp: timestamp.toISOString() };
+// });

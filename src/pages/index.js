@@ -3,7 +3,7 @@ import Image from "next/image";
 import { Inter } from "next/font/google";
 import styles from "@/styles/Home.module.css";
 import * as holtWinters from "holtwinters";
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 
 import * as d3 from "d3";
 
@@ -16,19 +16,57 @@ const ARIMAPromise = require("arima/async");
 
 const inter = Inter({ subsets: ["latin"] });
 
+const parseTime = (timestamp) => {
+  if (timestamp.slice(-1) === "Z") {
+    return d3.timeParse("%Y-%m-%dT%H:%M:%S.%LZ")(timestamp) || d3.timeParse("%Y-%m-%dT%H:%M:%SZ")(timestamp);
+  } else {
+    return null;
+  }
+};
+
+function createEvenlySpacedTimeseries(timeseries) {
+  const timestamps = timeseries.map((d) => parseTime(d.timestamp));
+
+  const numIntervals = timeseries.length;
+
+  const startTime = timestamps[0].getTime();
+  const endTime = timestamps[timestamps.length - 1].getTime();
+  const interval = (endTime - startTime) / (numIntervals - 1);
+
+  const evenlySpacedTimestamps = d3.range(numIntervals).map((i) => new Date(startTime + i * interval));
+
+  const evenlySpacedValues = evenlySpacedTimestamps.map((timestamp) => {
+    const closestIdx = d3.bisectLeft(timestamps, timestamp);
+    if (closestIdx === 0) {
+      return timeseries[0].value;
+    }
+    if (closestIdx === timestamps.length) {
+      return timeseries[timestamps.length - 1].value;
+    }
+
+    const before = timeseries[closestIdx - 1];
+    const after = timeseries[closestIdx];
+
+    const t = (timestamp.getTime() - parseTime(before.timestamp).getTime()) / (parseTime(after.timestamp).getTime() - parseTime(before.timestamp).getTime());
+
+    const value = before.value + t * (after.value - before.value);
+    return value;
+  });
+
+  return [evenlySpacedTimestamps.map((timestamp, index) => [timestamp.getTime(), evenlySpacedValues[index]]), interval];
+}
+
 const Myholtwinterschart = ({ values_timeseries, name }) => {
-  const values = values_timeseries.map((e) => e.value);
+  const rawValues = values_timeseries.map((e) => e.value);
+  const rawTimestamps = values_timeseries.map((e) => e.timestamp);
+  const rawData = rawTimestamps.map((timestamp, index) => [parseTime(timestamp).getTime(), rawValues[index]]);
+
   const [options, setOptions] = useState({
     chart: {
       type: "line",
     },
     title: {
-      text: `Holt winters${name}`,
-    },
-    yAxis: {
-      title: {
-        text: "Value",
-      },
+      text: `Holt winters ${name}`,
     },
     series: [
       {
@@ -38,58 +76,53 @@ const Myholtwinterschart = ({ values_timeseries, name }) => {
     ],
   });
 
+  const [predictedData, setPredictedData] = useState([]);
+
+  const [evenlySpacedData, setEvenlySpacedData] = useState([]);
+
   useEffect(() => {
-    const parseTime = (timestamp) => {
-      if (timestamp.slice(-1) === "Z") {
-        return d3.timeParse("%Y-%m-%dT%H:%M:%S.%LZ")(timestamp) || d3.timeParse("%Y-%m-%dT%H:%M:%SZ")(timestamp);
-      } else {
-        return null;
-      }
-    };
+    if (values_timeseries.length > 1) {
+      const [evenlySpacedTimeseries, intervalLength] = createEvenlySpacedTimeseries(values_timeseries.slice(0, cutoff));
 
-    const timestamps = values_timeseries.map((d) => parseTime(d.timestamp));
+      setEvenlySpacedData([evenlySpacedTimeseries, intervalLength]);
+    }
+  }, []);
 
-    const sortedData = values_timeseries.slice().sort((a, b) => parseTime(a.timestamp) - parseTime(b.timestamp));
-    const timeDiff = timestamps[timestamps.length - 1] - timestamps[0];
-    const numIntervals = values_timeseries.length;
-    // const interval = timeDiff / numIntervals;
-    // const evenlySpacedTimestamps = d3.range(numIntervals).map((i) => new Date(timestamps[0].getTime() + i * interval));
+  // useEffect(() => {
+  //   if (evenlySpacedData.length === 0) {
+  //     return;
+  //   }
+  //   const prediction = holtWinters(evenlySpacedData[0], ahead);
+  // }, [evenlySpacedData]);
 
-    const startTime = timestamps[0].getTime();
-    const endTime = timestamps[timestamps.length - 1].getTime();
-    const interval = (endTime - startTime) / (numIntervals - 1);
+  useEffect(() => {
+    if (evenlySpacedData.length === 0) {
+      return;
+    }
 
-    const evenlySpacedTimestamps = d3.range(numIntervals).map((i) => new Date(startTime + i * interval));
-
-    const evenlySpacedData = evenlySpacedTimestamps.map((timestamp) => {
-      const closestIdx = d3.bisectLeft(timestamps, timestamp);
-      if (closestIdx === 0) {
-        return { value: sortedData[0].value, timestamp: timestamp.toISOString() };
-      }
-      if (closestIdx === timestamps.length) {
-        return { value: sortedData[timestamps.length - 1].value, timestamp: timestamp.toISOString() };
-      }
-
-      const before = sortedData[closestIdx - 1];
-      const after = sortedData[closestIdx];
-
-      const t = (timestamp.getTime() - parseTime(before.timestamp).getTime()) / (parseTime(after.timestamp).getTime() - parseTime(before.timestamp).getTime());
-
-      const value = before.value + t * (after.value - before.value);
-      return { value, timestamp: timestamp.toISOString() };
-    });
-    const prediction = holtWinters(values.slice(0, cutoff), ahead);
-
-    const evenlySpacedValues = evenlySpacedData.map((e) => e.value);
     setOptions({
       ...options,
+      xAxis: {
+        type: "datetime",
+        title: {
+          text: "Time",
+        },
+      },
+      yAxis: {
+        title: {
+          text: "Value",
+        },
+      },
       series: [
-        { data: [...values], name: "actual" },
-        { data: [...values.slice(0, cutoff), ...prediction.augumentedDataset.slice(cutoff, till)], name: "predicted" },
-        { data: [...evenlySpacedValues], name: "evenly spaced", color: "green" },
+        { data: [...rawData], name: "Raw data", color: "green" },
+        {
+          data: [...evenlySpacedData[0]],
+          name: "Evenly spaced Data",
+          color: "pink",
+        },
       ],
     });
-  }, []);
+  }, [predictedData, evenlySpacedData]);
 
   return (
     <div>
@@ -99,17 +132,16 @@ const Myholtwinterschart = ({ values_timeseries, name }) => {
 };
 
 const Myarimachart = ({ values_timeseries, name }) => {
-  const option = {
+  const rawValues = values_timeseries.map((e) => e.value);
+  const rawTimestamps = values_timeseries.map((e) => e.timestamp);
+  const rawData = rawTimestamps.map((timestamp, index) => [parseTime(timestamp).getTime(), rawValues[index]]);
+
+  const [options, setOptions] = useState({
     chart: {
       type: "line",
     },
     title: {
-      text: `ARIMA${name}`,
-    },
-    yAxis: {
-      title: {
-        text: "Value",
-      },
+      text: `Arima ${name}`,
     },
     series: [
       {
@@ -117,26 +149,72 @@ const Myarimachart = ({ values_timeseries, name }) => {
         data: [],
       },
     ],
-  };
+  });
 
-  const [options, setOption] = useState(option);
+  const [predictedData, setPredictedData] = useState([]);
+
+  const [evenlySpacedData, setEvenlySpacedData] = useState([]);
 
   useEffect(() => {
-    const values = values_timeseries.map((e) => e.value);
-
-    // ARIMAPromise.then((ARIMA) => {
-    //   const arima = new ARIMA({ auto: true, optimizer: 1 }).train(values.slice(0, cutoff));
-    //   const [pred, errors] = arima.predict(ahead);
-    //   setOption({
-    //     ...options,
-    //     series: [
-    //       { data: [...values.slice(0, cutoff), ...pred], name: "predicted", color: "black" },
-    //       { data: [...values], name: "actual", color: "red" },
-    //       // { data: [...evenlySpacedData], name: "evenly spaced", color: "green" },
-    //     ],
-    //   });
-    // });
+    if (values_timeseries.length > 1) {
+      const [evenlySpacedTimeseries, intervalLength] = createEvenlySpacedTimeseries(values_timeseries.slice(0, cutoff));
+      setEvenlySpacedData([evenlySpacedTimeseries, intervalLength]);
+    }
   }, []);
+
+  useEffect(() => {
+    if (evenlySpacedData.length === 0) {
+      return;
+    }
+    ARIMAPromise.then((ARIMA) => {
+      const evenlySpacedValues = evenlySpacedData[0].slice(0, cutoff).map((e) => e[1]);
+
+      const arima = new ARIMA({ auto: true, optimizer: 1, verbose: false }).train(evenlySpacedValues);
+      const [pred, errors] = arima.predict(ahead);
+
+      // get average time between timestamps x and then create an array of timestamps starting from
+      // last timestamp + x until last timestamp + x * num timestamps
+
+      const futureTimestamps = d3.range(ahead).map((d, i) => evenlySpacedData[0][evenlySpacedData[0].length - 1][0] + evenlySpacedData[1] + i * evenlySpacedData[1]);
+
+      const predic = futureTimestamps.map((timestamp, index) => [timestamp, pred[index]]);
+      setPredictedData(predic);
+    });
+  }, [evenlySpacedData]);
+
+  useEffect(() => {
+    if (evenlySpacedData.length === 0) {
+      return;
+    }
+
+    setOptions({
+      ...options,
+      xAxis: {
+        type: "datetime",
+        title: {
+          text: "Time",
+        },
+      },
+      yAxis: {
+        title: {
+          text: "Value",
+        },
+      },
+      series: [
+        { data: [...rawData], name: "Raw data", color: "green" },
+        {
+          data: [...evenlySpacedData[0]],
+          name: "Evenly spaced Data",
+          color: "pink",
+        },
+        {
+          data: [...predictedData],
+          name: "prediction",
+          color: "red",
+        },
+      ],
+    });
+  }, [predictedData, evenlySpacedData]);
 
   return (
     <div>
