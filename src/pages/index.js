@@ -88,12 +88,21 @@ const Myholtwinterschart = ({ values_timeseries, name }) => {
     }
   }, []);
 
-  // useEffect(() => {
-  //   if (evenlySpacedData.length === 0) {
-  //     return;
-  //   }
-  //   const prediction = holtWinters(evenlySpacedData[0], ahead);
-  // }, [evenlySpacedData]);
+  useEffect(() => {
+    if (evenlySpacedData.length === 0) {
+      return;
+    }
+    const pred = holtWinters(
+      evenlySpacedData[0].map((e) => e[1]),
+      ahead
+    );
+
+    const futureTimestamps = d3.range(ahead).map((d, i) => evenlySpacedData[0][evenlySpacedData[0].length - 1][0] + evenlySpacedData[1] + i * evenlySpacedData[1]);
+
+    const predic = futureTimestamps.map((timestamp, index) => [timestamp, pred.augumentedDataset.slice(cutoff)[index]]);
+
+    setPredictedData(predic);
+  }, [evenlySpacedData]);
 
   useEffect(() => {
     if (evenlySpacedData.length === 0) {
@@ -119,6 +128,11 @@ const Myholtwinterschart = ({ values_timeseries, name }) => {
           data: [...evenlySpacedData[0]],
           name: "Evenly spaced Data",
           color: "pink",
+        },
+        {
+          data: [...predictedData],
+          name: "prediction",
+          color: "red",
         },
       ],
     });
@@ -178,6 +192,7 @@ const Myarimachart = ({ values_timeseries, name }) => {
       const futureTimestamps = d3.range(ahead).map((d, i) => evenlySpacedData[0][evenlySpacedData[0].length - 1][0] + evenlySpacedData[1] + i * evenlySpacedData[1]);
 
       const predic = futureTimestamps.map((timestamp, index) => [timestamp, pred[index]]);
+
       setPredictedData(predic);
     });
   }, [evenlySpacedData]);
