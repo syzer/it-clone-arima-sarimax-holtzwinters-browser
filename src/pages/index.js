@@ -239,6 +239,19 @@ const Myarimachart = ({ values_timeseries, name }) => {
 };
 
 export default function Home() {
+  const startTimestamp = Date.now();
+  const values_5 = [];
+
+  for (let i = 0; i < 500; i++) {
+    const date = new Date(startTimestamp + i * 1000);
+    const date_str = date.toISOString().replace(/(\d{3})Z$/, "$1Z");
+
+    values_5.push({
+      timestamp: date_str,
+      value: 10,
+    });
+  }
+
   return (
     <>
       <Myholtwinterschart values_timeseries={values_1} name="one" />
@@ -249,8 +262,8 @@ export default function Home() {
       <Myarimachart values_timeseries={values_3} name="three" />
       <Myholtwinterschart values_timeseries={values_4} name="four" />
       <Myarimachart values_timeseries={values_4} name="four" />
-      {/* <Myholtwinterschart values_timeseries={values_5_timeseries} />
-      <Myarimachart values_timeseries={values_5_timeseries} /> */}
+      <Myholtwinterschart values_timeseries={values_5} name="five" />
+      <Myarimachart values_timeseries={values_5} name="five" />
     </>
   );
 }
